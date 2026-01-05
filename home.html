@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Word Guess Game</title>
+<style>
+  :root{
+    --bg:#7990be; --card:#606a7a; --accent:#5ad1a0; --danger:#ef4444; --text:#e6eef8;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(180deg,#061022,#081126 120%); color:var(--text); font-family:system-ui,Segoe UI,Roboto,Arial;
+    padding:18px;
+  }
+  .card{width:100%; max-width:540px; background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:20px; box-shadow:0 14px 40px rgba(2,6,23,0.6);}
+  h1{margin:0 0 8px;font-size:1.25rem;color:var(--accent)}
+  p.lead{margin:0 0 14px;color:#9fb4d6;font-size:0.95rem}
+  .word{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:18px 0;font-size:2rem}
+  .letter{width:36px;height:52px;display:flex;align-items:center;justify-content:center;border-bottom:3px solid rgba(96,165,250,0.18);border-radius:6px;background:rgba(255,255,255,0.02);font-weight:700}
+  .info{display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .wrong{color:var(--danger); font-weight:700}
+  .keyboard{display:grid;grid-template-columns:repeat(13,1fr);gap:6px;margin-top:12px}
+  button.key{padding:8px 6px;border-radius:6px;border:1px solid rgba(255,255,255,0.04);background:rgba(255,255,255,0.02);cursor:pointer;font-weight:700}
+  button.key:disabled{opacity:0.35;cursor:not-allowed}
+  .actions{display:flex;gap:8px;justify-content:center;margin-top:14px}
+  .btn{padding:8px 12px;border-radius:8px;border:none;cursor:pointer;font-weight:700}
+  .btn.primary{background:var(--accent);color:#062033}
+  .btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.04);color:var(--text)}
+  .msg{margin-top:12px;text-align:center;font-weight:700}
+  @media (max-width:480px){
+    .word{font-size:1.4rem}
+    .letter{width:30px;height:44px}
+    .keyboard{grid-template-columns:repeat(9,1fr)}
+  }
+</style>
+</head>
+<body>
+  <div class="card" role="application" aria-label="Word Guess Game">
+    <h1>Word Guess</h1>
+    <p class="lead">Guess the hidden word. You have <span id="maxWrong">6</span> wrong guesses.</p>
+
+    <div id="word" class="word" aria-live="polite"></div>
+
+    <div class="info" style="margin-top:8px">
+      <div>Wrong guesses: <span id="wrongCount">0</span>/<span id="maxWrong2">6</span></div>
+      <div class="wrong" id="wrongLetters" aria-live="polite"></div>
+    </div>
+
+    <div id="keyboard" class="keyboard" aria-hidden="false" style="margin-top:12px"></div>
+
+    <div class="actions">
+      <button id="restart" class="btn primary">Restart</button>
+      <button id="hint" class="btn ghost">Hint</button>
+    </div>
+
+    <div id="message" class="msg" aria-live="assertive"></div>
+  </div>
+
+<script>
+(function(){
+  // ====== Config =======
+  const WORDS = [
+    "PYTHON","JAVASCRIPT","DATABASE","COMPUTER","MONITOR","KEYBOARD","SOFTWARE",
+    "NETWORK","ALGORITHM","FUNCTION","VARIABLE","FLASK","REACT","OBJECT","MODULE"
+  ];
+  const MAX_WRONG = 6;
+
+  // ====== Elements ======
+  const wordEl = document.getElementById('word');
+  const keyboardEl = document.getElementById('keyboard');
+  const wrongLettersEl = document.getElementById('wrongLetters');
+  const wrongCountEl = document.getElementById('wrongCount');
+  const maxWrongEl = document.getElementById('maxWrong');
+  const maxWrong2El = document.getElementById('maxWrong2');
+  const messageEl = document.getElementById('message');
+  const restartBtn = document.getElementById('restart');
+  const hintBtn = document.getElementById('hint');
+
+  maxWrongEl.textContent = MAX_WRONG;
+  maxWrong2El.textContent = MAX_WRONG;
+
+  // ====== State ======
+  let secret = "";
+  let correct = new Set();
+  let wrong = new Set();
+  let finished = false;
+
+  // ====== Helpers ======
+  function pickWord(){
+    const idx = Math.floor(Math.random()*WORDS.length);
+    return WORDS[idx];
+  }
+
+  function renderWord(){
+    wordEl.innerHTML = "";
+    for(const ch of secret){
+      const span = document.createElement('div');
+      span.className = 'letter';
+      span.textContent = correct.has(ch) ? ch : '';
+      span.setAttribute('aria-hidden', correct.has(ch) ? 'false' : 'true');
+      wordEl.appendChild(span);
+    }
+  }
+
+  function createKeyboard(){
+    keyboardEl.innerHTML = "";
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    for(const L of letters){
+      const btn = document.createElement('button');
+      btn.className = 'key';
+      btn.textContent = L;
+      btn.dataset.letter = L;
+      btn.addEventListener('click', onLetterClick);
+      keyboardEl.appendChild(btn);
+    }
+  }
+
+  function updateUI(){
+    renderWord();
+    wrongLettersEl.textContent = [...wrong].join(' ');
+    wrongCountEl.textContent = wrong.size;
+    // disable keys for used letters
+    document.querySelectorAll('.key').forEach(btn => {
+      const L = btn.dataset.letter;
+      btn.disabled = correct.has(L) || wrong.has(L) || finished;
+    });
+  }
+
+  function checkWinLose(){
+    // win if all letters in secret are in correct set
+    const allFound = [...secret].every(ch => correct.has(ch));
+    if(allFound){
+      finished = true;
+      messageEl.textContent = "🎉 You win! Nice job.";
+      messageEl.style.color = "";
+      updateUI();
+      return;
+    }
+    if(wrong.size >= MAX_WRONG){
+      finished = true;
+    //  messageEl.innerHTML = Yourlostwordwas : <strong>${secret}</strong>;
+      messageEl.style.color = "";
+      // reveal word
+      secret.split('').forEach(ch=> correct.add(ch));
+      updateUI();
+      return;
+    }
+  }
+
+  // ====== Actions ======
+  function onLetterClick(e){
+    if(finished) return;
+    const L = e.currentTarget.dataset.letter;
+    handleGuess(L);
+  }
+
+  function handleGuess(letter){
+    if(finished) return;
+    if(secret.includes(letter)){
+      correct.add(letter);
+      messageEl.textContent = "Good!";
+    } else {
+      if(!wrong.has(letter)){
+        wrong.add(letter);
+        messageEl.textContent = "Wrong!";
+      }
+    }
+    updateUI();
+    checkWinLose();
+  }
+
+  function giveHint(){
+    if(finished) return;
+    // reveal a random unrevealed letter
+    const unrevealed = [...new Set(secret.split('').filter(ch => !correct.has(ch)))];
+    if(unrevealed.length === 0) return;
+    const pick = unrevealed[Math.floor(Math.random()*unrevealed.length)];
+    correct.add(pick);
+    //messageEl.textContent = Hint used: revealed "${pick}";
+    // penalize a wrong guess for balance
+    wrong.add('✖'); // special marker to use as a penalty display
+    // keep wrong set small: replace marker with 'H' to avoid weird symbol if duplicates
+    if(wrong.size > MAX_WRONG) {
+      // ensure we don't exceed max (very unlikely)
+      while(wrong.size > MAX_WRONG) {
+        const it = wrong.values().next().value;
+        wrong.delete(it);
+      }
+    }
+    updateUI();
+    checkWinLose();
+  }
+
+  function start(){
+    secret = pickWord().toUpperCase();
+    correct = new Set();
+    wrong = new Set();
+    finished = false;
+    messageEl.textContent = "";
+    createKeyboard();
+    updateUI();
+  }
+
+  // ====== Keyboard support ======
+  window.addEventListener('keydown', (e) => {
+    if(finished) return;
+    const key = e.key.toUpperCase();
+    if(/^[A-Z]$/.test(key)){
+      // find the button that matches and simulate a click
+      //const btn = document.querySelector(button.key[data-letter = "${key}"] );
+      if(btn && !btn.disabled){
+        btn.classList.add('pressed');
+        setTimeout(()=>btn.classList.remove('pressed'),120);
+        handleGuess(key);
+      }
+    }
+    // R to restart
+    if(e.key === 'r' || e.key === 'R') start();
+    // H for hint
+    if(e.key === 'h' || e.key === 'H') giveHint();
+  });
+
+  // ====== Buttons ======
+  restartBtn.addEventListener('click', start);
+  hintBtn.addEventListener('click', giveHint);
+
+  // ====== Init ======
+  start();
+
+  // Safety: if console errors happen earlier, we still want something visible
+  try{ }catch(err){ console.error(err); }
+
+})();
+</script>
+</body>
+</html>
