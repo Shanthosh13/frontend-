@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Student Expense Calculator</title>
+  <!-- Tailwind Play CDN for quick styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen text-slate-800">
+  <!-- Login Modal -->
+  <div id="loginModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-sm w-full mx-4">
+      <h2 class="text-2xl font-bold mb-6 text-center text-indigo-600">Student Expense Calculator</h2>
+      <form id="login-form" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium mb-2">Name (optional)</label>
+          <input type="text" id="userName" class="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your name">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-2">Email (optional)</label>
+          <input type="email" id="userEmail" class="w-full p-3 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter your email">
+        </div>
+        <div class="flex gap-3 mt-6">
+          <button type="button" id="skipLogin" class="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition">Skip</button>
+          <button type="button" id="submitLogin" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">Login</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto p-6">
+    <header class="mb-6 bg-white/90 backdrop-blur p-6 rounded-2xl shadow-lg">
+      <h1 class="text-3xl font-bold text-indigo-600">Student Expense Calculator — Living Away From Home</h1>
+      <p class="text-sm text-slate-600 mt-1">Estimate monthly and semester costs and see a category breakdown.</p>
+      <p id="userGreeting" class="text-sm text-indigo-500 mt-2 font-medium"></p>
+    </header>
+
+    <main class="grid md:grid-cols-2 gap-6">
+      <section class="bg-white/95 backdrop-blur p-4 rounded-2xl shadow-lg">
+        <h2 class="font-semibold mb-3 text-indigo-600">Enter monthly expenses</h2>
+        <form id="expense-form" class="space-y-3">
+          <label class="block">
+            <span class="text-sm">Rent (monthly)</span>
+            <input type="number" min="0" step="0.01" id="rent" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">Food (monthly)</span>
+            <input type="number" min="0" step="0.01" id="food" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">Food (per day)</span>
+            <input type="number" min="0" step="0.01" id="foodPerDay" class="w-full mt-1 p-2 border rounded" value="0">
+            <div class="text-xs text-slate-500 mt-1">If you enter daily food, it overrides the monthly food input (assumes 30 days).</div>
+          </label>
+          <label class="block">
+            <span class="text-sm">Transport (monthly)</span>
+            <input type="number" min="0" step="0.01" id="transport" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">Utilities (electricity, water, internet)</span>
+            <input type="number" min="0" step="0.01" id="utilities" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">Study materials & subscriptions (monthly)</span>
+            <input type="number" min="0" step="0.01" id="study" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">Misc / Entertainment (monthly)</span>
+            <input type="number" min="0" step="0.01" id="misc" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+          <label class="block">
+            <span class="text-sm">One-time costs this semester (e.g., deposit, travel)</span>
+            <input type="number" min="0" step="0.01" id="oneTime" class="w-full mt-1 p-2 border rounded" value="0">
+          </label>
+
+          <div class="flex gap-2 mt-2">
+            <button id="calculate" type="button" class="px-4 py-2 bg-indigo-600 text-white rounded shadow">Calculate</button>
+            <button id="reset" type="button" class="px-4 py-2 border rounded">Reset</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="bg-white/95 backdrop-blur p-4 rounded-2xl shadow-lg">
+        <h2 class="font-semibold mb-3 text-indigo-600">Results & breakdown</h2>
+        <div id="results" class="space-y-3 text-sm">
+          <div>Monthly total: <strong id="monthlyTotal">₹0.00</strong></div>
+          <div>Semester total (6 months): <strong id="semesterTotal">₹0.00</strong></div>
+          <div>Average daily (30-day month): <strong id="dailyAvg">₹0.00</strong></div>
+        </div>
+
+        <div class="mt-4">
+          <canvas id="breakdownChart" width="400" height="300" class="w-full border rounded"></canvas>
+        </div>
+
+        <div class="mt-4 text-xs text-slate-600">
+          <p><strong>Tip:</strong> Adjust "one-time costs" to include deposits and travel; the app prorates them across the semester.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mt-6 text-center text-xs text-slate-500">
+      Built for students — open-source & offline-friendly.
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
